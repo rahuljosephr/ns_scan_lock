@@ -449,7 +449,7 @@ def compute_score(fund: dict) -> int:
 
 
 # ══════════════════════════════════════════════════════
-#  SIDEBAR: ALL CONTROLS
+#  SIDEBAR: CONFIGURATION & CONTROLS
 # ══════════════════════════════════════════════════════
 
 with st.sidebar:
@@ -506,15 +506,22 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # Advanced Customization Toggle
+    # ── Advanced Customization Toggle ──
     enable_custom = st.checkbox("⚙️ Customize Parameters", value=True,
-                                help="Adjust Market Cap, price filters, volume, R:R and fundamental filters.")
+                                help="Adjust Market Cap tiers, price filters, volume, R:R and fundamental filters.")
 
     if enable_custom:
-        st.markdown('<div class="sidebar-section">Market Cap Filter (₹ Cr)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-section">Market Cap Checkboxes (₹ Cr)</div>', unsafe_allow_html=True)
+        cap_1k = st.checkbox("₹1,000 - ₹10,000 Cr (Small/Mid)", value=True)
+        cap_10k = st.checkbox("₹10,000 - ₹1,00,000 Cr (Mid/Large)", value=False)
+        cap_100k = st.checkbox("> ₹1,00,000 Cr (Mega/Large)", value=False)
+        cap_under_1k = st.checkbox("< ₹1,000 Cr (Micro/Penny)", value=False)
+
+        st.markdown('<div class="sidebar-section">Custom Market Cap Filter (₹ Cr)</div>', unsafe_allow_html=True)
+        use_custom_mcap = st.checkbox("Use Custom Range (Overrides Checkboxes)", value=False)
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            min_mcap = st.number_input("Min Cap (Cr)", min_value=0.0, max_value=1000000.0, value=1000.0, step=500.0)
+            min_mcap = st.number_input("Min Cap (Cr)", min_value=0.0, max_value=10000000.0, value=1000.0, step=500.0)
         with col_m2:
             max_mcap = st.number_input("Max Cap (Cr)", min_value=10.0, max_value=10000000.0, value=10000.0, step=1000.0)
 
@@ -532,6 +539,11 @@ with st.sidebar:
         min_fii = st.slider("Min FII / Institutional (%)", 0.0, 50.0, 0.0, 1.0)
         min_dii = st.slider("Min DII Change (%)", 0.0, 50.0, 0.0, 1.0)
     else:
+        cap_1k = True
+        cap_10k = False
+        cap_100k = False
+        cap_under_1k = False
+        use_custom_mcap = False
         min_mcap = 1000.0
         max_mcap = 10000.0
         min_price = 0.5
@@ -575,6 +587,24 @@ st.markdown(f"""
 #  HIGH-SPEED 2-STAGE SCANNER EXECUTION
 # ══════════════════════════════════════════════════════
 
+def is_mcap_allowed(mcap: float) -> bool:
+    if mcap <= 0:
+        return True
+    if use_custom_mcap:
+        return min_mcap <= mcap <= max_mcap
+    
+    allowed = False
+    if cap_under_1k and mcap < 1000:
+        allowed = True
+    if cap_1k and 1000 <= mcap < 10000:
+        allowed = True
+    if cap_10k and 10000 <= mcap < 100000:
+        allowed = True
+    if cap_100k and mcap >= 100000:
+        allowed = True
+    return allowed
+
+
 if run_btn and selected_universe:
     universe = selected_universe[:max_symbols]
     total = len(universe)
@@ -613,7 +643,7 @@ if run_btn and selected_universe:
             except Exception:
                 continue
 
-    # Stage 2: Targeted Fundamentals (Only on technical breakout candidates)
+    # Stage 2: Targeted Fundamentals
     results = []
     num_candidates = len(technical_candidates)
     
@@ -629,7 +659,7 @@ if run_btn and selected_universe:
         fii  = fund.get("fii_holding", 0.0)
         dii  = fund.get("dii_holding", 0.0)
 
-        if mcap > 0 and (mcap < min_mcap or mcap > max_mcap):
+        if not is_mcap_allowed(mcap):
             continue
         if fii < min_fii or dii < min_dii:
             continue
@@ -841,7 +871,7 @@ with tab1:
       <div class="kpi-card blue">
         <div class="kpi-number">{scanned}</div>
         <div class="kpi-label">Symbols scanned</div>
-        <div class="kpi-sub">Market Cap ₹{min_mcap:,.0f}–{max_mcap:,.0f} Cr</div>
+        <div class="kpi-sub">Filtered Universe</div>
       </div>
       <div class="kpi-card amber">
         <div class="kpi-number">{n_bo}</div>
@@ -867,7 +897,7 @@ with tab1:
           <div class="empty-icon">🔍</div>
           <div class="empty-title">No results yet</div>
           <div class="empty-body">
-            Select your stock categories in the sidebar and click <b>▶ Run Deep Scanner</b>.
+            Select your stock categories and Market Cap checkboxes in the sidebar, then click <b>▶ Run Deep Scanner</b>.
           </div>
         </div>
         """, unsafe_allow_html=True)
