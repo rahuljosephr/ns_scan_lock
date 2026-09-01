@@ -257,7 +257,7 @@ section[data-testid="stSidebar"] > div { padding-top: 0; }
 
 
 # ══════════════════════════════════════════════════════
-#  STOCK UNIVERSES (Curated + Full NSE Auto-Loader)
+#  STOCK UNIVERSES (Curated Lists + Full NSE Ticker Loader)
 # ══════════════════════════════════════════════════════
 UNIVERSE_LARGE_MID = [
     "RELIANCE","TCS","HDFCBANK","ICICIBANK","BHARTIARTL","SBIN","INFY","ITC",
@@ -325,6 +325,7 @@ HIGH_GROWTH_SECTORS = {
 
 @st.cache_data(ttl=86400)
 def load_all_nse_symbols():
+    """Fetches full NSE active equity master list (~2,000+ scrips)."""
     url = "https://raw.githubusercontent.com/anirudhsudhir/NSE-Listed-Companies-Dataset/master/EQUITY_L.csv"
     try:
         df = pd.read_csv(url)
@@ -334,7 +335,7 @@ def load_all_nse_symbols():
 
 
 # ══════════════════════════════════════════════════════
-#  DATA FETCHING & FUNDAMENTALS
+#  DATA FETCHING & FUNDAMENTALS (Live yfinance Data)
 # ══════════════════════════════════════════════════════
 
 def fetch_weekly_ohlcv(symbol: str):
@@ -475,7 +476,7 @@ def scan_symbol(symbol, min_rr, sector_filter, min_mcap, max_mcap, min_fii, min_
     fii  = fund.get("fii_holding", 0.0)
     dii  = fund.get("dii_holding", 0.0)
     
-    # Check Market Cap constraints
+    # Check Market Cap filter constraints
     if mcap > 0 and (mcap < min_mcap or mcap > max_mcap):
         return None
         
@@ -698,13 +699,15 @@ with st.sidebar:
         custom_list = [t.strip().upper() for t in custom_tickers_input.split(",") if t.strip()]
         selected_universe.extend(custom_list)
 
+    # Remove duplicates
     selected_universe = list(dict.fromkeys(selected_universe))
 
+    # ── No Cap Scan Scope ──
     st.markdown('<div class="sidebar-section">Scan Scope</div>', unsafe_allow_html=True)
-    scan_all = st.checkbox("Scan Full Universe (No Limit Cap)", value=True)
+    scan_all = st.checkbox("Scan Full Universe (No Cap)", value=True)
     
     if not scan_all:
-        max_symbols = st.slider("Symbols to scan", 5, max(5, len(selected_universe)), min(40, len(selected_universe)), 5)
+        max_symbols = st.slider("Symbols to scan", 5, max(5, len(selected_universe)), min(50, len(selected_universe)), 5)
     else:
         max_symbols = len(selected_universe)
         st.caption(f"Will scan all **{len(selected_universe)}** selected symbols.")
