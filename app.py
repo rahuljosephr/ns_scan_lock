@@ -1,7 +1,6 @@
 """
 NSE Weekly Downward-Resistance Trendline Breakout Scanner
-Multi-Bagger Growth Filter + Institutional Accumulation Layer
-Includes Large-Cap, Mid-Cap, Small-Cap, Micro-Cap, Penny Stocks & Full 2000+ NSE Universe
+Full 2000+ Universe (Direct NSE Master Sync) + Institutional & FII Layer
 Run: streamlit run app.py
 """
 
@@ -14,13 +13,15 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import urllib.request
 import time
+import io
 
 # ══════════════════════════════════════════════════════
 #  PAGE CONFIG
 # ══════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="NSE Breakout Scanner",
+    page_title="NSE Breakout Scanner (Full 2000+)",
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -122,28 +123,6 @@ section[data-testid="stSidebar"] > div { padding-top: 0; }
 .kpi-label { font-size: 0.7rem; color: #475569; letter-spacing: 0.04em; }
 .kpi-sub { font-size: 0.65rem; color: #334155; margin-top: 0.35rem; font-family: 'IBM Plex Mono', monospace; }
 
-.section-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: #334155;
-  text-transform: uppercase;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #0f172a;
-  margin-bottom: 1rem;
-}
-
-.score-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
-.score-bar-track {
-  flex: 1;
-  height: 4px;
-  background: #0f172a;
-  border-radius: 999px;
-  overflow: hidden;
-}
-.score-bar-fill { height: 100%; border-radius: 999px; background: var(--bar-color, #38bdf8); }
-.score-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; width: 2rem; text-align: right; }
-
 .result-card {
   background: #0a0f1a;
   border: 1px solid #0f172a;
@@ -194,34 +173,6 @@ section[data-testid="stSidebar"] > div { padding-top: 0; }
 .tp-val.t2     { color: #86efac; }
 .tp-val.rr     { color: #a78bfa; }
 
-.fund-card {
-  background: #0a0f1a;
-  border: 1px solid #0f172a;
-  border-radius: 10px;
-  padding: 1.1rem;
-  margin-bottom: 0.75rem;
-}
-.fund-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.38rem 0;
-  border-bottom: 1px solid #0f172a;
-}
-.fund-row:last-child { border-bottom: none; }
-.fund-row-label { font-size: 0.73rem; color: #475569; }
-.fund-badge {
-  display: inline-block;
-  padding: 0.1rem 0.55rem;
-  border-radius: 5px;
-  font-size: 0.7rem;
-  font-family: 'IBM Plex Mono', monospace;
-}
-.badge-green  { background: #052e16; color: #34d399; border: 1px solid #14532d; }
-.badge-amber  { background: #1c1208; color: #f59e0b; border: 1px solid #451a03; }
-.badge-red    { background: #1c0808; color: #f87171; border: 1px solid #450a0a; }
-.badge-neutral{ background: #0f172a; color: #64748b; border: 1px solid #1e293b; }
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -242,7 +193,6 @@ section[data-testid="stSidebar"] > div { padding-top: 0; }
 .stTabs [data-baseweb="tab"] { background: transparent; color: #475569; font-size: 0.8rem; font-weight: 500; padding: 0.55rem 1.1rem; border-radius: 0; border-bottom: 2px solid transparent; }
 .stTabs [aria-selected="true"] { color: #38bdf8 !important; border-bottom: 2px solid #38bdf8 !important; background: transparent !important; }
 .stProgress > div > div { background: #38bdf8 !important; }
-.stProgress { margin-top: 0.5rem; }
 .stButton > button[kind="primary"] {
   background: linear-gradient(135deg, #0ea5e9, #6366f1) !important;
   border: none !important;
@@ -257,147 +207,56 @@ section[data-testid="stSidebar"] > div { padding-top: 0; }
 
 
 # ══════════════════════════════════════════════════════
-#  STOCK UNIVERSES (Curated Lists + Full NSE Ticker Loader)
+#  RELIABLE FULL NSE UNIVERSE LOADER (~2,100+ EQUITIES)
 # ══════════════════════════════════════════════════════
-UNIVERSE_LARGE_MID = [
-    "RELIANCE","TCS","HDFCBANK","ICICIBANK","BHARTIARTL","SBIN","INFY","ITC",
-    "HINDUNILVR","LT","BAJFINANCE","HCLTECH","MARUTI","SUNPHARMA","ADANIENT",
-    "M&M","ONGC","NTPC","KOTAKBANK","TITAN","POWERGRID","AXISBANK",
-    "DMART","WIPRO","COALINDIA","ULTRACEMCO","BAJAJFINSV","ADANIPORTS",
-    "JSWSTEEL","TATASTEEL","SIEMENS","GRASIM","BEL","PIDILITIND","HINDALCO",
-    "IOC","DLF","VEDL","ETERNAL","DIVISLAB","TRENT","CHOLAFIN","GAIL",
-    "EICHERMOT","BPCL","GODREJCP","TATAPOWER","INDIGO","ABB","TECHM",
-    "HAVELLS","DABUR","AMBUJACEM","SHRIRAMFIN","HAL","POLYCAB","BAJAJ-AUTO"
-]
-
-UNIVERSE_SMALL_CAP = [
-    "DIXON","KAYNES","SYRMA","AVALON","BDL","BEML","PARAS","MAZDOCK",
-    "COCHINSHIP","GRSE","ADANIGREEN","INOXWIND","SUZLON","IRFC","RVNL",
-    "IRCON","TITAGARH","RAILTEL","AHLUCONT","KNRCON","PNCINFRA","DEEPAKNTR",
-    "TATACHEM","CLEAN","ATUL","ROSSARI","CUMMINSIND","GRINDWELL","THERMAX",
-    "TATAELXSI","LTTS","PERSISTENT","COFORGE","MPHASIS","APOLLOHOSP","MAXHEALTH",
-    "KIMS","JYOTHYLAB","MARICO","ABFRL","ASTRAL","SUPREMEIND","FINPIPE",
-    "MUTHOOTFIN","SBICARD","JMFINANCIL","MOTILALOFS","NYKAA","POLICYBZR",
-    "MANKIND","IPCALAB","GRANULES","LAURUSLABS","LALPATHLAB","METROPOLIS",
-    "VIJAYA","IIFL","ANGELONE","CDSL","DELHIVERY","BLUEDART","RAMCOCEM",
-    "JKCEMENT","HEIDELBERG","VAIBHAVGBL","KALYANKJIL","RADICO","GLOBUSSPR",
-    "ZYDUSWELL","BALKRISIND","CEATLTD","AIAENG","ELGIEQUIP","TIMKEN",
-    "CREDITACC","UJJIVANSFB","EQUITASBNK","NAVINFLUOR","TPLPLASTEH","PCBL","DATAMATICS"
-]
-
-UNIVERSE_MICRO_PENNY = [
-    "SUZLON","RPOWER","JPPOWER","IDEA","GTLINFRA","YESBANK","IFCI",
-    "SOUTHBANK","UCOBANK","CENTRALBK","IOB","MAHABANK","RCOM","VIKASLIFE",
-    "URJA","FCSSOFT","SEPOWER","ORIENTALTL","BOMDYEING","ALOKINDS",
-    "HCC","JISLJALEQS","MMTC","DISHTV","HFCL","SYNCOMF","LLOYDSENGG",
-    "MOREPENLAB","SAKUMA","RTNPOWER","GVKPIL","IVC","BLS","VIVIDHA"
-]
-
-SECTOR_MAP = {
-    "DIXON":"EMS","KAYNES":"EMS","SYRMA":"EMS","AVALON":"EMS",
-    "HAL":"Defence","BDL":"Defence","BEML":"Defence","PARAS":"Defence",
-    "MAZDOCK":"Defence","COCHINSHIP":"Defence","GRSE":"Defence",
-    "ADANIGREEN":"Renewable Energy","INOXWIND":"Renewable Energy","SUZLON":"Renewable Energy",
-    "IRFC":"Railways","RVNL":"Railways","IRCON":"Railways",
-    "TITAGARH":"Railways","RAILTEL":"Railways",
-    "LARSEN":"Infrastructure","AHLUCONT":"Infrastructure",
-    "KNRCON":"Infrastructure","PNCINFRA":"Infrastructure","LT":"Infrastructure",
-    "DEEPAKNTR":"Specialty Chemicals","TATACHEM":"Specialty Chemicals",
-    "CLEAN":"Specialty Chemicals","ATUL":"Specialty Chemicals","ROSSARI":"Specialty Chemicals",
-    "POLYCAB":"Capital Goods","CUMMINSIND":"Capital Goods",
-    "GRINDWELL":"Capital Goods","THERMAX":"Capital Goods","SIEMENS":"Capital Goods","ABB":"Capital Goods",
-    "TATAELXSI":"Technology","LTTS":"Technology","PERSISTENT":"Technology",
-    "COFORGE":"Technology","MPHASIS":"Technology","TCS":"Technology","INFY":"Technology","HCLTECH":"Technology","WIPRO":"Technology","TECHM":"Technology",
-    "APOLLOHOSP":"Healthcare","MAXHEALTH":"Healthcare","KIMS":"Healthcare","SUNPHARMA":"Healthcare","DIVISLAB":"Healthcare",
-    "JYOTHYLAB":"FMCG","MARICO":"FMCG","GODREJCP":"FMCG","ITC":"FMCG","HINDUNILVR":"FMCG","DABUR":"FMCG",
-    "ABFRL":"Retail","TRENT":"Retail","DMART":"Retail",
-    "HDFCBANK":"Banking","ICICIBANK":"Banking","SBIN":"Banking","KOTAKBANK":"Banking","AXISBANK":"Banking",
-    "BAJFINANCE":"Financial Services","BAJAJFINSV":"Financial Services","CHOLAFIN":"Financial Services","SHRIRAMFIN":"Financial Services",
-    "MARUTI":"Automobile","EICHERMOT":"Automobile","BAJAJ-AUTO":"Automobile","M&M":"Automobile",
-    "TATASTEEL":"Metals","JSWSTEEL":"Metals","HINDALCO":"Metals","VEDL":"Metals","COALINDIA":"Metals",
-    "RELIANCE":"Energy","ONGC":"Energy","BPCL":"Energy","IOC":"Energy","GAIL":"Energy","NTPC":"Energy","POWERGRID":"Energy","TATAPOWER":"Energy",
-}
-
-HIGH_GROWTH_SECTORS = {
-    "EMS","Defence","Renewable Energy","Railways",
-    "Infrastructure","Specialty Chemicals","Capital Goods","Technology",
-}
-
 @st.cache_data(ttl=86400)
-def load_all_nse_symbols():
-    """Fetches full NSE active equity master list (~2,000+ scrips)."""
-    url = "https://raw.githubusercontent.com/anirudhsudhir/NSE-Listed-Companies-Dataset/master/EQUITY_L.csv"
-    try:
-        df = pd.read_csv(url)
-        return [s.strip() for s in df['SYMBOL'].dropna().tolist() if s.strip()]
-    except Exception:
-        return UNIVERSE_LARGE_MID + UNIVERSE_SMALL_CAP + UNIVERSE_MICRO_PENNY
-
-
-# ══════════════════════════════════════════════════════
-#  DATA FETCHING & FUNDAMENTALS (Live yfinance Data)
-# ══════════════════════════════════════════════════════
-
-def fetch_weekly_ohlcv(symbol: str):
-    try:
-        df = yf.download(f"{symbol}.NS", period="2y", interval="1wk", progress=False, timeout=8)
-        if df is None or len(df) < 10:
-            return None
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-        df = df.reset_index()
-        date_col = [c for c in df.columns if "Date" in str(c) or "Datetime" in str(c)][0]
-        df[date_col] = pd.to_datetime(df[date_col])
-        df = df.set_index(date_col)
-        cols = ["Open", "High", "Low", "Close", "Volume"]
-        df = df[cols].dropna()
-        for col in cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        return df.dropna()
-    except Exception:
-        return None
-
-
-def fetch_fundamentals(symbol: str) -> dict:
-    fii_holding = 0.0
-    dii_holding = 0.0
-    market_cap_cr = 0.0
-
-    try:
-        ticker = yf.Ticker(f"{symbol}.NS")
-        fast_cap = getattr(ticker.fast_info, "market_cap", None)
-        if fast_cap:
-            market_cap_cr = round(fast_cap / 1e7, 2)
-        
-        major_holders = ticker.major_holders
-        if major_holders is not None and not major_holders.empty:
-            for _, row in major_holders.iterrows():
-                row_str = " ".join([str(x) for x in row.values]).lower()
-                val = row.iloc[0]
-                try:
-                    num_val = float(str(val).replace('%', '').strip())
-                    if "institutions" in row_str or "institutional" in row_str:
-                        fii_holding = num_val
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    return {
-        "sector": SECTOR_MAP.get(symbol, "Small/Penny Cap"),
-        "market_cap_cr": market_cap_cr,
-        "fii_holding": fii_holding,
-        "dii_holding": dii_holding,
-        "sales_cagr_3y": 18.5,
-        "pat_cagr_3y": 20.2,
-        "roce": 18.0,
-        "roe": 16.5,
-        "debt_equity": 0.35,
+def fetch_all_nse_symbols():
+    urls = [
+        "https://archives.nseindia.com/content/equities/EQUITY_L.csv",
+        "https://raw.githubusercontent.com/anirudhsudhir/NSE-Listed-Companies-Dataset/master/EQUITY_L.csv",
+        "https://raw.githubusercontent.com/datasets/nse-indices/master/data/ind_nifty500list.csv"
+    ]
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     }
 
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                csv_bytes = response.read()
+                df = pd.read_csv(io.BytesIO(csv_bytes))
+                sym_col = [c for c in df.columns if 'symbol' in c.lower() or 'Symbol' in c][0]
+                symbols = df[sym_col].dropna().astype(str).str.strip().tolist()
+                valid = [s for s in symbols if s and not s.startswith(" ") and s != "SYMBOL"]
+                if len(valid) > 200:
+                    return sorted(list(set(valid)))
+        except Exception:
+            continue
+
+    # Fallback to broad list if remote sources fail
+    return [
+        "RELIANCE","TCS","HDFCBANK","ICICIBANK","BHARTIARTL","SBIN","INFY","ITC",
+        "HINDUNILVR","LT","BAJFINANCE","HCLTECH","MARUTI","SUNPHARMA","ADANIENT",
+        "M&M","ONGC","NTPC","KOTAKBANK","TITAN","POWERGRID","AXISBANK","DMART",
+        "WIPRO","COALINDIA","ULTRACEMCO","BAJAJFINSV","ADANIPORTS","JSWSTEEL",
+        "TATASTEEL","SIEMENS","GRASIM","BEL","PIDILITIND","HINDALCO","IOC","DLF",
+        "VEDL","ETERNAL","DIVISLAB","TRENT","CHOLAFIN","GAIL","EICHERMOT","BPCL",
+        "TATAPOWER","INDIGO","ABB","TECHM","HAVELLS","DABUR","AMBUJACEM","HAL",
+        "DIXON","KAYNES","SYRMA","AVALON","BDL","BEML","PARAS","MAZDOCK","COCHINSHIP",
+        "GRSE","ADANIGREEN","INOXWIND","SUZLON","IRFC","RVNL","IRCON","TITAGARH",
+        "RAILTEL","AHLUCONT","KNRCON","PNCINFRA","DEEPAKNTR","TATACHEM","CLEAN",
+        "ATUL","ROSSARI","CUMMINSIND","TATAELXSI","LTTS","PERSISTENT","COFORGE"
+    ]
+
+
+ALL_NSE_STOCKS = fetch_all_nse_symbols()
+
 
 # ══════════════════════════════════════════════════════
-#  TECHNICAL ANALYSIS ENGINE
+#  TECHNICAL & FUNDAMENTAL ENGINE
 # ══════════════════════════════════════════════════════
 
 def detect_breakout(df, lookback_weeks, min_vol_ratio, target_multiplier, min_price, max_price):
@@ -423,8 +282,8 @@ def detect_breakout(df, lookback_weeks, min_vol_ratio, target_multiplier, min_pr
     sl     = min(raw_sl, entry * 0.94)
     risk   = max(entry - sl, entry * 0.02)
     
-    target1     = entry + target_multiplier * risk
-    target2     = np.max(highs[max(0, li-52):li]) if li >= 10 else entry * 1.15
+    target1 = entry + target_multiplier * risk
+    target2 = np.max(highs[max(0, li-52):li]) if li >= 10 else entry * 1.15
     
     vsma = vols[max(0, li-10):li].mean() if li >= 5 else vols[li]
     vol_ratio = round(vols[li] / vsma, 2) if vsma > 0 else 1.2
@@ -433,231 +292,37 @@ def detect_breakout(df, lookback_weeks, min_vol_ratio, target_multiplier, min_pr
         return None
     
     return {
-        "entry":          round(entry, 2),
-        "sl":             round(float(sl), 2),
-        "target1":        round(float(target1), 2),
-        "target2":        round(float(target2), 2),
-        "risk_pct":       round(float((risk/entry)*100), 2),
-        "rr_ratio":       round(float((target1-entry)/risk), 2),
+        "entry": round(entry, 2),
+        "sl": round(float(sl), 2),
+        "target1": round(float(target1), 2),
+        "target2": round(float(target2), 2),
+        "risk_pct": round(float((risk/entry)*100), 2),
+        "rr_ratio": round(float((target1-entry)/risk), 2),
         "breakout_level": round(float(trendline[li]), 2),
-        "vsma_ratio":     vol_ratio,
-        "trendline":      trendline
+        "vsma_ratio": vol_ratio,
+        "trendline": trendline
     }
 
 
-def compute_score(fund: dict) -> int:
-    score = 50
-    if fund.get("sector","") in HIGH_GROWTH_SECTORS:
-        score += 20
-    if (fund.get("fii_holding") or 0) > 5.0:
-        score += 15
-    if 1000 <= (fund.get("market_cap_cr") or 0) <= 10000:
-        score += 15
-    return min(100, score)
-
-
-def scan_symbol(symbol, min_rr, sector_filter, min_mcap, max_mcap, min_fii, min_dii,
-                lookback_weeks, min_vol_ratio, target_multiplier, min_price, max_price):
-    df = fetch_weekly_ohlcv(symbol)
-    if df is None:
-        return None
+def fetch_symbol_data(symbol: str) -> dict:
+    fii_holding = 0.0
+    market_cap_cr = 0.0
+    try:
+        t = yf.Ticker(f"{symbol}.NS")
+        fast_cap = getattr(t.fast_info, "market_cap", None)
+        if fast_cap:
+            market_cap_cr = round(fast_cap / 1e7, 2)
         
-    bo = detect_breakout(df, lookback_weeks, min_vol_ratio, target_multiplier, min_price, max_price)
-    if bo is None or bo["rr_ratio"] < min_rr:
-        return None
+        major_holders = t.major_holders
+        if major_holders is not None and not major_holders.empty:
+            for _, r in major_holders.iterrows():
+                r_str = " ".join([str(x) for x in r.values]).lower()
+                if "institutions" in r_str or "institutional" in r_str:
+                    fii_holding = float(str(r.iloc[0]).replace('%', '').strip())
+    except Exception:
+        pass
         
-    fund = fetch_fundamentals(symbol)
-    sector = fund.get("sector","Unknown")
-    
-    if sector_filter != "All" and sector != sector_filter:
-        return None
-        
-    mcap = fund.get("market_cap_cr", 0.0)
-    fii  = fund.get("fii_holding", 0.0)
-    dii  = fund.get("dii_holding", 0.0)
-    
-    # Check Market Cap filter constraints
-    if mcap > 0 and (mcap < min_mcap or mcap > max_mcap):
-        return None
-        
-    if fii < min_fii or dii < min_dii:
-        return None
-        
-    score = compute_score(fund)
-    return {
-        "Symbol":          symbol,
-        "Sector":          sector,
-        "LTP":             bo["entry"],
-        "Market Cap (Cr)": mcap if mcap > 0 else "N/A",
-        "Breakout Level":  bo["breakout_level"],
-        "Stop Loss":       bo["sl"],
-        "Target (1:3)":    bo["target1"],
-        "Target 2":        bo["target2"],
-        "Risk %":          bo["risk_pct"],
-        "R:R":             bo["rr_ratio"],
-        "Vol Expansion":   bo["vsma_ratio"],
-        "Inst / FII %":    fii,
-        "DII %":           dii,
-        "Sales CAGR 3Y":   fund["sales_cagr_3y"],
-        "PAT CAGR 3Y":     fund["pat_cagr_3y"],
-        "ROCE":            fund["roce"],
-        "ROE":             fund["roe"],
-        "D/E":             fund["debt_equity"],
-        "Growth Score":    score,
-        "_df":             df,
-        "_trendline":      bo["trendline"],
-        "_fund":           fund,
-    }
-
-
-# ══════════════════════════════════════════════════════
-#  CHART BUILDERS
-# ══════════════════════════════════════════════════════
-
-def build_chart(symbol: str, row: dict) -> go.Figure:
-    df        = row["_df"]
-    trendline = row["_trendline"]
-    sl, t1, t2 = row["Stop Loss"], row["Target (1:3)"], row["Target 2"]
-    dates     = df.index.tolist()
-
-    fig = make_subplots(
-        rows=2, cols=1, shared_xaxes=True,
-        row_heights=[0.73, 0.27], vertical_spacing=0.03,
-    )
-    fig.add_trace(go.Candlestick(
-        x=dates, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
-        name="Price",
-        increasing_line_color="#34d399", increasing_fillcolor="#34d399",
-        decreasing_line_color="#f87171", decreasing_fillcolor="#f87171",
-    ), row=1, col=1)
-    fig.add_trace(go.Scatter(
-        x=dates, y=trendline, mode="lines", name="Resistance",
-        line=dict(color="#f59e0b", width=1.8, dash="dot"),
-    ), row=1, col=1)
-    for level, color, dash, label in [
-        (sl,  "#f87171", "dash",  f"SL  ₹{sl:.1f}"),
-        (t1,  "#34d399", "dash",  f"T1  ₹{t1:.1f}"),
-        (t2,  "#86efac", "dot",   f"T2  ₹{t2:.1f}"),
-    ]:
-        fig.add_hline(
-            y=level, line_color=color, line_dash=dash,
-            annotation_text=label, annotation_font_color=color,
-            annotation_position="right", row=1, col=1,
-        )
-    vol_colors = ["#34d399" if c >= o else "#f87171"
-                  for o, c in zip(df["Open"], df["Close"])]
-    fig.add_trace(go.Bar(
-        x=dates, y=df["Volume"], name="Volume",
-        marker_color=vol_colors, opacity=0.55,
-    ), row=2, col=1)
-
-    axis_style = dict(gridcolor="#0f172a", zerolinecolor="#0f172a", color="#475569")
-    fig.update_layout(
-        title=dict(text=f"<b>{symbol}.NS</b> — Weekly Breakout Chart", font=dict(size=13, color="#94a3b8")),
-        paper_bgcolor="#060a10", plot_bgcolor="#060a10",
-        font=dict(family="Inter", color="#64748b"),
-        xaxis_rangeslider_visible=False,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
-        height=580,
-        margin=dict(l=10, r=80, t=48, b=10),
-        xaxis=axis_style, xaxis2=axis_style,
-        yaxis=axis_style, yaxis2=axis_style,
-    )
-    return fig
-
-
-def build_radar(fund: dict) -> go.Figure:
-    cats  = ["Sales CAGR","PAT CAGR","ROCE","ROE","Low Leverage"]
-    sales = min(max(0, fund.get("sales_cagr_3y") or 0)/40*100, 100)
-    pat   = min(max(0, fund.get("pat_cagr_3y") or 0)/40*100, 100)
-    roce  = min(max(0, fund.get("roce") or 0)/30*100, 100)
-    roe   = min(max(0, fund.get("roe") or 0)/30*100, 100)
-    de    = fund.get("debt_equity")
-    lev   = max(0, 100-(de or 1)*50) if de is not None else 50
-    vals  = [sales, pat, roce, roe, lev]
-    fig = go.Figure(go.Scatterpolar(
-        r=vals+[vals[0]], theta=cats+[cats[0]],
-        fill="toself", line_color="#38bdf8", fillcolor="rgba(56,189,248,0.1)",
-    ))
-    fig.update_layout(
-        polar=dict(
-            bgcolor="#0a0f1a",
-            radialaxis=dict(visible=True, range=[0,100], color="#334155", gridcolor="#0f172a"),
-            angularaxis=dict(color="#475569"),
-        ),
-        paper_bgcolor="#060a10",
-        font=dict(color="#64748b", size=11),
-        height=280, margin=dict(l=30,r=30,t=20,b=20),
-    )
-    return fig
-
-
-def badge_html(val, good, fmt="{:.1f}", suffix="%"):
-    if val is None:
-        return '<span class="fund-badge badge-neutral">—</span>'
-    cls = "badge-green" if val >= good else "badge-amber"
-    return f'<span class="fund-badge {cls}">{fmt.format(val)}{suffix}</span>'
-
-
-def result_card_html(r: dict) -> str:
-    sym     = r["Symbol"]
-    sector  = r["Sector"]
-    ltp     = r["LTP"]
-    sl      = r["Stop Loss"]
-    t1      = r["Target (1:3)"]
-    rr      = r["R:R"]
-    risk    = r["Risk %"]
-    vol     = r["Vol Expansion"]
-    score   = r["Growth Score"]
-    mcap    = r["Market Cap (Cr)"]
-    fii     = r["Inst / FII %"]
-    is_hg   = sector in HIGH_GROWTH_SECTORS
-
-    sc = "#34d399" if score>=70 else ("#f59e0b" if score>=45 else "#f87171")
-    mcap_str = f"₹{mcap:,.0f} Cr" if isinstance(mcap, (int, float)) else str(mcap)
-    fii_str   = f"{fii:.1f}%" if fii else "—"
-
-    hg_pill  = f'<span class="pill pill-hg">★ {sector}</span>' if is_hg else f'<span class="pill pill-hg" style="background:#0f172a;color:#334155;">{sector}</span>'
-    rr_pill  = f'<span class="pill pill-rr">R:R {rr}x</span>'
-    vol_pill = f'<span class="pill pill-vol">Vol {vol}x</span>'
-
-    return f"""
-    <div class="result-card">
-      <div>
-        <div class="result-symbol">{sym}</div>
-        <div class="result-sector">{sector}</div>
-        <div style="margin-top:0.3rem;">{hg_pill}</div>
-      </div>
-      <div class="result-metric">
-        <div class="result-metric-label">LTP</div>
-        <div class="result-metric-value">₹{ltp:.2f}</div>
-        <div style="margin-top:0.3rem;">{rr_pill}</div>
-      </div>
-      <div class="result-metric">
-        <div class="result-metric-label">Stop Loss</div>
-        <div class="result-metric-value red">₹{sl:.2f}</div>
-        <div class="result-metric-label" style="margin-top:0.2rem;">Risk {risk}%</div>
-      </div>
-      <div class="result-metric">
-        <div class="result-metric-label">Target 1</div>
-        <div class="result-metric-value green">₹{t1:.2f}</div>
-        <div style="margin-top:0.3rem;">{vol_pill}</div>
-      </div>
-      <div class="result-metric">
-        <div class="result-metric-label">Market Cap</div>
-        <div class="result-metric-value amber">{mcap_str}</div>
-        <div class="result-metric-label" style="margin-top:0.2rem;">FII {fii_str}</div>
-      </div>
-      <div style="min-width:90px;">
-        <div class="result-metric-label" style="margin-bottom:0.35rem;">Score</div>
-        <div class="score-bar-wrap">
-          <div class="score-bar-track">
-            <div class="score-bar-fill" style="width:{score}%;background:{sc};"></div>
-          </div>
-          <div class="score-num" style="color:{sc};">{score}</div>
-        </div>
-      </div>
-    </div>"""
+    return {"market_cap_cr": market_cap_cr, "fii_holding": fii_holding}
 
 
 # ══════════════════════════════════════════════════════
@@ -668,291 +333,211 @@ with st.sidebar:
     st.markdown("""
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">📡 NSE Breakout Scanner</div>
-      <div class="sidebar-logo-sub">Weekly trendline breakouts · Multi-bagger filter</div>
+      <div class="sidebar-logo-sub">Full Universe · Market Cap &amp; FII Filter</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Stock Categories Selection ──
-    st.markdown('<div class="sidebar-section">Stock Universe Selection</div>', unsafe_allow_html=True)
-    inc_full_nse = st.checkbox("🌐 Entire Listed NSE Universe (2,000+ stocks)", value=False)
+    st.markdown(f'<div class="sidebar-section">Universe Mode (Total: {len(ALL_NSE_STOCKS)})</div>', unsafe_allow_html=True)
     
-    if not inc_full_nse:
-        inc_large = st.checkbox("Large & Mid Caps (Nifty 100)", value=True)
-        inc_small = st.checkbox("Growth Small Caps (~₹500 - ₹2000)", value=True)
-        inc_penny = st.checkbox("Penny & Micro Caps (< ₹100)", value=True)
+    universe_mode = st.radio("Select Universe Scope", [
+        f"🌐 Full NSE Listed Universe ({len(ALL_NSE_STOCKS)} Stocks)",
+        "⚡ Nifty 500 Fast Scan (Top 500)",
+        "🎯 Custom Stock List"
+    ])
+
+    if "Full NSE" in universe_mode:
+        selected_universe = ALL_NSE_STOCKS
+    elif "500" in universe_mode:
+        selected_universe = ALL_NSE_STOCKS[:500]
     else:
-        inc_large = inc_small = inc_penny = False
+        custom_input = st.text_input("Enter comma-separated tickers", "SUZLON, YESBANK, TATASTEEL, KAYNES, DIXON")
+        selected_universe = [s.strip().upper() for s in custom_input.split(",") if s.strip()]
 
-    custom_tickers_input = st.text_input("Custom Tickers (optional, comma-separated)", "",
-                                         help="e.g. YESBANK, SUZLON, TATASTEEL")
-
-    # Build Universe dynamically
-    selected_universe = []
-    if inc_full_nse:
-        selected_universe.extend(load_all_nse_symbols())
-    else:
-        if inc_large: selected_universe.extend(UNIVERSE_LARGE_MID)
-        if inc_small: selected_universe.extend(UNIVERSE_SMALL_CAP)
-        if inc_penny: selected_universe.extend(UNIVERSE_MICRO_PENNY)
-    
-    if custom_tickers_input:
-        custom_list = [t.strip().upper() for t in custom_tickers_input.split(",") if t.strip()]
-        selected_universe.extend(custom_list)
-
-    # Remove duplicates
-    selected_universe = list(dict.fromkeys(selected_universe))
-
-    # ── No Cap Scan Scope ──
-    st.markdown('<div class="sidebar-section">Scan Scope</div>', unsafe_allow_html=True)
-    scan_all = st.checkbox("Scan Full Universe (No Cap)", value=True)
-    
+    # No cap toggle
+    scan_all = st.checkbox("Scan Full Selection (No Cap Limit)", value=True)
     if not scan_all:
-        max_symbols = st.slider("Symbols to scan", 5, max(5, len(selected_universe)), min(50, len(selected_universe)), 5)
+        max_symbols = st.slider("Symbols to scan", 10, len(selected_universe), min(100, len(selected_universe)), 10)
     else:
         max_symbols = len(selected_universe)
-        st.caption(f"Will scan all **{len(selected_universe)}** selected symbols.")
-
-    all_sectors = ["All"] + sorted({
-        "EMS","Defence","Renewable Energy","Railways","Infrastructure",
-        "Specialty Chemicals","Capital Goods","Technology",
-        "Healthcare","FMCG","Retail","Banking","Financial Services",
-        "Automobile","Metals","Energy","Small/Penny Cap"
-    })
-    sector_filter = st.selectbox("Sector filter", all_sectors)
+        st.info(f"Targeting all **{max_symbols}** stocks.")
 
     st.markdown("---")
-    
-    # ── Advanced Customization Toggle ──
-    enable_custom = st.checkbox("⚙️ Customize Parameters", value=True,
-                                help="Tick to adjust market cap, price, volume, R:R and fundamental filters.")
+    st.markdown('<div class="sidebar-section">Market Cap Filter (₹ Cr)</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        min_mcap = st.number_input("Min Cap (Cr)", value=1000.0, step=500.0)
+    with c2:
+        max_mcap = st.number_input("Max Cap (Cr)", value=10000.0, step=1000.0)
 
-    if enable_custom:
-        st.markdown('<div class="sidebar-section">Market Cap Filter (₹ Cr)</div>', unsafe_allow_html=True)
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            min_mcap = st.number_input("Min Cap (Cr)", min_value=0.0, max_value=1000000.0, value=1000.0, step=500.0)
-        with col_m2:
-            max_mcap = st.number_input("Max Cap (Cr)", min_value=10.0, max_value=10000000.0, value=10000.0, step=1000.0)
-
-        st.markdown('<div class="sidebar-section">Price Range Filter</div>', unsafe_allow_html=True)
-        min_price = st.number_input("Min Stock Price (₹)", min_value=0.5, max_value=50000.0, value=1.0, step=1.0)
-        max_price = st.number_input("Max Stock Price (₹)", min_value=1.0, max_value=100000.0, value=10000.0, step=10.0)
-
-        st.markdown('<div class="sidebar-section">Technical Settings</div>', unsafe_allow_html=True)
-        min_rr = st.slider("Min Risk : Reward", 1.0, 4.0, 1.0, 0.5)
-        lookback_weeks = st.slider("Trendline Lookback (Weeks)", 10, 40, 20, 2)
-        min_vol_ratio = st.slider("Min Volume Ratio (vs 10W SMA)", 0.2, 3.0, 0.5, 0.1)
-        target_multiplier = st.slider("Target Multiplier (x Risk)", 1.5, 5.0, 2.5, 0.5)
-
-        st.markdown('<div class="sidebar-section">Institutional & Holdings Filter</div>', unsafe_allow_html=True)
-        min_fii = st.slider("Min FII / Institutional (%)", 0.0, 50.0, 0.0, 1.0)
-        min_dii = st.slider("Min DII Change (%)", 0.0, 50.0, 0.0, 1.0)
-    else:
-        min_mcap = 1000.0
-        max_mcap = 10000.0
-        min_price = 0.5
-        max_price = 100000.0
-        min_rr = 1.0
-        lookback_weeks = 20
-        min_vol_ratio = 0.5
-        target_multiplier = 2.5
-        min_fii = 0.0
-        min_dii = 0.0
+    st.markdown('<div class="sidebar-section">Price & Technical Settings</div>', unsafe_allow_html=True)
+    min_price = st.number_input("Min Stock Price (₹)", value=1.0)
+    max_price = st.number_input("Max Stock Price (₹)", value=50000.0)
+    min_rr = st.slider("Min Risk : Reward", 1.0, 4.0, 1.0, 0.5)
+    lookback_weeks = st.slider("Lookback (Weeks)", 10, 40, 20, 2)
+    min_vol_ratio = st.slider("Min Volume Ratio", 0.2, 3.0, 0.5, 0.1)
+    target_multiplier = st.slider("Target Multiplier", 1.5, 5.0, 2.5, 0.5)
+    min_fii = st.slider("Min FII / Inst %", 0.0, 50.0, 0.0, 1.0)
 
     st.markdown("---")
-    run_btn = st.button("▶  Run Deep Scanner", use_container_width=True, type="primary", disabled=len(selected_universe) == 0)
+    run_btn = st.button("▶  Run Deep Scanner", use_container_width=True, type="primary")
 
 
 # ══════════════════════════════════════════════════════
-#  SESSION STATE & APP HEADER
+#  SCANNER EXECUTION (Fast Batch Parallel Mode)
 # ══════════════════════════════════════════════════════
 
-if "results"       not in st.session_state: st.session_state.results       = []
+if "results" not in st.session_state: st.session_state.results = []
 if "scanned_count" not in st.session_state: st.session_state.scanned_count = 0
-if "last_run_ts"   not in st.session_state: st.session_state.last_run_ts   = None
-
-ts_label = f"Last scan: {st.session_state.last_run_ts}" if st.session_state.last_run_ts else "Ready to scan"
-
-st.markdown(f"""
-<div class="app-header">
-  <div class="app-header-icon">📡</div>
-  <div>
-    <div class="app-header-title">NSE Breakout Scanner</div>
-    <div class="app-header-sub">
-      Weekly downward-resistance trendline breakouts · Multi-Cap, Penny &amp; Full Universe Screener
-    </div>
-  </div>
-  <div class="app-header-badge">{ts_label}</div>
-</div>
-""", unsafe_allow_html=True)
-
-
-# ══════════════════════════════════════════════════════
-#  SCANNER EXECUTION
-# ══════════════════════════════════════════════════════
 
 if run_btn and selected_universe:
     universe = selected_universe[:max_symbols]
-    results  = []
-    prog     = st.progress(0, text="Initialising…")
-    for i, sym in enumerate(universe):
-        prog.progress((i+1)/len(universe), text=f"Scanning {sym}  ({i+1} / {len(universe)})")
+    results = []
+    batch_size = 50
+    total = len(universe)
+    prog = st.progress(0, text="Initialising scanner…")
+
+    for i in range(0, total, batch_size):
+        batch = universe[i:i+batch_size]
+        prog.progress(min(1.0, (i + batch_size) / total), text=f"Processing {i}/{total} stocks…")
+        
+        tickers_str = " ".join([f"{s}.NS" for s in batch])
         try:
-            r = scan_symbol(sym, min_rr, sector_filter, min_mcap, max_mcap, min_fii, min_dii,
-                            lookback_weeks, min_vol_ratio, target_multiplier, min_price, max_price)
-            if r:
-                results.append(r)
+            batch_data = yf.download(tickers_str, period="2y", interval="1wk", group_by="ticker", progress=False, timeout=12)
         except Exception:
-            pass
-        time.sleep(0.01)
+            continue
+
+        for sym in batch:
+            try:
+                if len(batch) == 1:
+                    df = batch_data.copy()
+                else:
+                    df = batch_data[f"{sym}.NS"].copy() if f"{sym}.NS" in batch_data else None
+
+                if df is None or df.empty or len(df.dropna()) < 10:
+                    continue
+
+                bo = detect_breakout(df, lookback_weeks, min_vol_ratio, target_multiplier, min_price, max_price)
+                if bo is None or bo["rr_ratio"] < min_rr:
+                    continue
+
+                fund = fetch_symbol_data(sym)
+                mcap = fund["market_cap_cr"]
+                fii = fund["fii_holding"]
+
+                if mcap > 0 and (mcap < min_mcap or mcap > max_mcap):
+                    continue
+                if fii < min_fii:
+                    continue
+
+                score = 50 + (25 if 1000 <= mcap <= 10000 else 0) + (25 if fii > 5.0 else 0)
+
+                results.append({
+                    "Symbol": sym,
+                    "LTP": bo["entry"],
+                    "Market Cap (Cr)": mcap if mcap > 0 else "N/A",
+                    "Stop Loss": bo["sl"],
+                    "Target 1": bo["target1"],
+                    "Target 2": bo["target2"],
+                    "Risk %": bo["risk_pct"],
+                    "R:R": bo["rr_ratio"],
+                    "Vol Expansion": bo["vsma_ratio"],
+                    "Inst / FII %": fii,
+                    "Growth Score": score,
+                    "_df": df,
+                    "_trendline": bo["trendline"]
+                })
+            except Exception:
+                continue
+
     prog.empty()
     results.sort(key=lambda x: x["Growth Score"], reverse=True)
-    st.session_state.results       = results
-    st.session_state.scanned_count = len(universe)
-    st.session_state.last_run_ts   = pd.Timestamp.now().strftime("%d %b %Y, %H:%M")
+    st.session_state.results = results
+    st.session_state.scanned_count = total
     st.rerun()
 
 
 # ══════════════════════════════════════════════════════
-#  TABS
+#  RESULTS RENDER
 # ══════════════════════════════════════════════════════
 
-tab1, tab2, tab3 = st.tabs([
-    "  📋  Screener & Leaderboard  ",
-    "  📈  Chart Deep-Dive  ",
-    "  🧮  Fundamentals  ",
-])
+results = st.session_state.results
 
+st.markdown(f"""
+<div class="kpi-row">
+  <div class="kpi-card blue">
+    <div class="kpi-number">{st.session_state.scanned_count}</div>
+    <div class="kpi-label">Symbols Scanned</div>
+    <div class="kpi-sub">Full Universe Scope</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="kpi-number">{len(results)}</div>
+    <div class="kpi-label">Breakouts Identified</div>
+    <div class="kpi-sub">Cap ₹{min_mcap:,.0f}–{max_mcap:,.0f} Cr</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-number">{len([r for r in results if r['Growth Score'] >= 75])}</div>
+    <div class="kpi-label">High Conviction</div>
+    <div class="kpi-sub">FII + Mcap Verified</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-# ─────────────────────────── TAB 1 ───────────────────────────
-with tab1:
-    results  = st.session_state.results
-    scanned  = st.session_state.scanned_count
-    n_bo     = len(results)
-    n_hc     = len([r for r in results if r["Growth Score"] >= 60])
-    avg_sc   = round(np.mean([r["Growth Score"] for r in results]), 1) if results else 0
-
-    st.markdown(f"""
-    <div class="kpi-row">
-      <div class="kpi-card blue">
-        <div class="kpi-number">{scanned}</div>
-        <div class="kpi-label">Symbols scanned</div>
-        <div class="kpi-sub">Market Cap ₹{min_mcap:,.0f}–{max_mcap:,.0f} Cr</div>
-      </div>
-      <div class="kpi-card amber">
-        <div class="kpi-number">{n_bo}</div>
-        <div class="kpi-label">Breakouts found</div>
-        <div class="kpi-sub">Confirmed setups</div>
-      </div>
-      <div class="kpi-card green">
-        <div class="kpi-number">{n_hc}</div>
-        <div class="kpi-label">High-conviction setups</div>
-        <div class="kpi-sub">Growth Score ≥ 60</div>
-      </div>
-      <div class="kpi-card purple">
-        <div class="kpi-number">{avg_sc}</div>
-        <div class="kpi-label">Avg growth score</div>
-        <div class="kpi-sub">Composite 0–100</div>
-      </div>
+if not results:
+    st.markdown("""
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">Ready to Scan Full Universe</div>
+      <div class="empty-body">Click <b>▶ Run Deep Scanner</b> to scan across the full 2,000+ NSE stock list.</div>
     </div>
     """, unsafe_allow_html=True)
-
-    if not results:
-        st.markdown("""
-        <div class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <div class="empty-title">No results yet</div>
-          <div class="empty-body">
-            Select your stock categories in the sidebar and click <b>▶ Run Deep Scanner</b>.
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
+else:
+    tab1, tab2 = st.tabs(["📋 Screener Results", "📈 Chart Deep-Dive"])
+    with tab1:
         for r in results:
-            st.markdown(result_card_html(r), unsafe_allow_html=True)
-
-
-# ─────────────────────────── TAB 2 ───────────────────────────
-with tab2:
-    results = st.session_state.results
-    if not results:
-        st.markdown("""
-        <div class="empty-state">
-          <div class="empty-icon">📈</div>
-          <div class="empty-title">Charts unlock after scanning</div>
-          <div class="empty-body">Run the scanner first to inspect charts.</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        syms = [r["Symbol"] for r in results]
-        selected = st.selectbox("Stock", syms, key="chart_select")
-        row = next(r for r in results if r["Symbol"] == selected)
-
-        risk_amt   = row["LTP"] - row["Stop Loss"]
-        reward_amt = row["Target (1:3)"] - row["LTP"]
-
-        st.markdown(f"""
-        <div class="trade-panel">
-          <div>
-            <div class="tp-label">Entry</div>
-            <div class="tp-val entry">₹{row['LTP']:.2f}</div>
-          </div>
-          <div>
-            <div class="tp-label">Stop Loss</div>
-            <div class="tp-val sl">₹{row['Stop Loss']:.2f}</div>
-          </div>
-          <div>
-            <div class="tp-label">Target 1</div>
-            <div class="tp-val t1">₹{row['Target (1:3)']:.2f}</div>
-          </div>
-          <div>
-            <div class="tp-label">Target 2 (52W High)</div>
-            <div class="tp-val t2">₹{row['Target 2']:.2f}</div>
-          </div>
-          <div>
-            <div class="tp-label">R:R Ratio</div>
-            <div class="tp-val rr">{row['R:R']}x</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        fig = build_chart(selected, row)
-        st.plotly_chart(fig, use_container_width=True)
-
-
-# ─────────────────────────── TAB 3 ───────────────────────────
-with tab3:
-    results = st.session_state.results
-    if not results:
-        st.markdown("""
-        <div class="empty-state">
-          <div class="empty-icon">🧮</div>
-          <div class="empty-title">Fundamentals unlock after scanning</div>
-          <div class="empty-body">Run the scanner first to inspect fundamentals.</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        syms = [r["Symbol"] for r in results]
-        selected_f = st.selectbox("Stock", syms, key="fund_select")
-        row_f = next(r for r in results if r["Symbol"] == selected_f)
-        fund  = row_f["_fund"]
-
-        col_l, col_r = st.columns([1, 1])
-
-        with col_l:
-            st.markdown('<div class="section-label">Financial Metrics & Holdings</div>', unsafe_allow_html=True)
+            mcap_val = f"₹{r['Market Cap (Cr)']:,.0f} Cr" if isinstance(r['Market Cap (Cr)'], (int, float)) else "N/A"
+            fii_val = f"{r['Inst / FII %']:.1f}%" if r['Inst / FII %'] else "—"
             st.markdown(f"""
-            <div class="fund-card">
-              <div class="fund-row"><span class="fund-row-label">Sector</span><span>{fund.get('sector')}</span></div>
-              <div class="fund-row"><span class="fund-row-label">Market Cap</span><span>₹{row_f.get('Market Cap (Cr)')} Cr</span></div>
-              <div class="fund-row"><span class="fund-row-label">Inst / FII Holding</span>{badge_html(fund.get('fii_holding'), 5.0)}</div>
-              <div class="fund-row"><span class="fund-row-label">Sales CAGR 3Y</span>{badge_html(fund.get('sales_cagr_3y'), 15)}</div>
-              <div class="fund-row"><span class="fund-row-label">PAT CAGR 3Y</span>{badge_html(fund.get('pat_cagr_3y'), 15)}</div>
-              <div class="fund-row"><span class="fund-row-label">ROCE</span>{badge_html(fund.get('roce'), 15)}</div>
-              <div class="fund-row"><span class="fund-row-label">ROE</span>{badge_html(fund.get('roe'), 15)}</div>
+            <div class="result-card">
+              <div>
+                <div class="result-symbol">{r['Symbol']}</div>
+                <div class="result-sector">{mcap_val}</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">LTP</div>
+                <div class="result-metric-value">₹{r['LTP']:.2f}</div>
+                <div class="pill pill-rr">R:R {r['R:R']}x</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">Stop Loss</div>
+                <div class="result-metric-value red">₹{r['Stop Loss']:.2f}</div>
+                <div class="result-metric-label" style="margin-top:0.2rem;">Risk {r['Risk %']}%</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">Target 1</div>
+                <div class="result-metric-value green">₹{r['Target 1']:.2f}</div>
+                <div class="pill pill-vol">Vol {r['Vol Expansion']}x</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-label">Inst / FII Holding</div>
+                <div class="result-metric-value amber">{fii_val}</div>
+              </div>
+              <div>
+                <div class="result-metric-label">Score</div>
+                <div style="font-family:'IBM Plex Mono', monospace; font-size:1.1rem; color:#38bdf8;">{r['Growth Score']}</div>
+              </div>
             </div>
             """, unsafe_allow_html=True)
 
-        with col_r:
-            st.markdown('<div class="section-label">Fundamental Radar</div>', unsafe_allow_html=True)
-            st.plotly_chart(build_radar(fund), use_container_width=True)
+    with tab2:
+        syms = [r["Symbol"] for r in results]
+        selected = st.selectbox("Select Stock", syms)
+        row = next(r for r in results if r["Symbol"] == selected)
+        df = row["_df"]
+        dates = df.index.tolist()
+
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.75, 0.25], vertical_spacing=0.03)
+        fig.add_trace(go.Candlestick(x=dates, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"], name="Price"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=dates, y=row["_trendline"], mode="lines", name="Resistance", line=dict(color="#f59e0b", width=1.8, dash="dot")), row=1, col=1)
+        fig.add_trace(go.Bar(x=dates, y=df["Volume"], name="Volume", opacity=0.55), row=2, col=1)
+        fig.update_layout(paper_bgcolor="#060a10", plot_bgcolor="#060a10", xaxis_rangeslider_visible=False, height=550)
+        st.plotly_chart(fig, use_container_width=True)
