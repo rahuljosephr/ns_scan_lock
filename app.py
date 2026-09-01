@@ -244,7 +244,6 @@ section[data-testid="stSidebar"] > div { padding-top: 0; }
 .stTabs [data-baseweb="tab"] { background: transparent; color: #475569; font-size: 0.8rem; font-weight: 500; padding: 0.55rem 1.1rem; border-radius: 0; border-bottom: 2px solid transparent; }
 .stTabs [aria-selected="true"] { color: #38bdf8 !important; border-bottom: 2px solid #38bdf8 !important; background: transparent !important; }
 .stProgress > div > div { background: #38bdf8 !important; }
-.stProgress { margin-top: 0.5rem; }
 .stButton > button[kind="primary"] {
   background: linear-gradient(135deg, #0ea5e9, #6366f1) !important;
   border: none !important;
@@ -450,7 +449,7 @@ def compute_score(fund: dict) -> int:
 
 
 # ══════════════════════════════════════════════════════
-#  SIDEBAR: ALL ORIGINAL CONTROLS + 2000+ TOGGLE
+#  SIDEBAR: ALL CONTROLS
 # ══════════════════════════════════════════════════════
 
 with st.sidebar:
@@ -465,38 +464,38 @@ with st.sidebar:
     inc_full_nse = st.checkbox(f"🌐 Full NSE Universe ({len(ALL_NSE_STOCKS)} stocks)", value=False)
     
     if not inc_full_nse:
-        inc_large = st.checkbox("Large & Mid Caps (Nifty 100)", value=True)[cite: 1]
-        inc_small = st.checkbox("Growth Small Caps (~₹500 - ₹2000)", value=True)[cite: 1]
-        inc_penny = st.checkbox("Penny & Micro Caps (< ₹100)", value=True)[cite: 1]
+        inc_large = st.checkbox("Large & Mid Caps (Nifty 100)", value=True)
+        inc_small = st.checkbox("Growth Small Caps (~₹500 - ₹2000)", value=True)
+        inc_penny = st.checkbox("Penny & Micro Caps (< ₹100)", value=True)
     else:
         inc_large = inc_small = inc_penny = False
 
-    custom_tickers_input = st.text_input("Custom Tickers (optional, comma-separated)", "",[cite: 1]
-                                         help="e.g. YESBANK, SUZLON, TATASTEEL")[cite: 1]
+    custom_tickers_input = st.text_input("Custom Tickers (optional, comma-separated)", "",
+                                         help="e.g. YESBANK, SUZLON, TATASTEEL")
 
     # Build dynamic universe
     selected_universe = []
     if inc_full_nse:
         selected_universe.extend(ALL_NSE_STOCKS)
     else:
-        if inc_large: selected_universe.extend(UNIVERSE_LARGE_MID)[cite: 1]
-        if inc_small: selected_universe.extend(UNIVERSE_SMALL_CAP)[cite: 1]
-        if inc_penny: selected_universe.extend(UNIVERSE_MICRO_PENNY)[cite: 1]
+        if inc_large: selected_universe.extend(UNIVERSE_LARGE_MID)
+        if inc_small: selected_universe.extend(UNIVERSE_SMALL_CAP)
+        if inc_penny: selected_universe.extend(UNIVERSE_MICRO_PENNY)
     
     if custom_tickers_input:
-        custom_list = [t.strip().upper() for t in custom_tickers_input.split(",") if t.strip()][cite: 1]
-        selected_universe.extend(custom_list)[cite: 1]
+        custom_list = [t.strip().upper() for t in custom_tickers_input.split(",") if t.strip()]
+        selected_universe.extend(custom_list)
 
-    selected_universe = list(dict.fromkeys(selected_universe))[cite: 1]
+    selected_universe = list(dict.fromkeys(selected_universe))
 
     st.markdown('<div class="sidebar-section">Scope & Sector</div>', unsafe_allow_html=True)
-    all_sectors = ["All"] + sorted({[cite: 1]
-        "EMS","Defence","Renewable Energy","Railways","Infrastructure",[cite: 1]
-        "Specialty Chemicals","Capital Goods","Technology",[cite: 1]
-        "Healthcare","FMCG","Retail","Banking","Financial Services",[cite: 1]
-        "Automobile","Metals","Energy","Small/Penny Cap"[cite: 1]
-    })[cite: 1]
-    sector_filter = st.selectbox("Sector filter", all_sectors)[cite: 1]
+    all_sectors = ["All"] + sorted({
+        "EMS","Defence","Renewable Energy","Railways","Infrastructure",
+        "Specialty Chemicals","Capital Goods","Technology",
+        "Healthcare","FMCG","Retail","Banking","Financial Services",
+        "Automobile","Metals","Energy","Small/Penny Cap"
+    })
+    sector_filter = st.selectbox("Sector filter", all_sectors)
 
     scan_all = st.checkbox("Scan Full Universe (No Limit Cap)", value=True)
     if not scan_all:
@@ -507,8 +506,8 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # ── Advanced Customization Toggle ──
-    enable_custom = st.checkbox("⚙️ Customize Parameters", value=True,[cite: 1]
+    # Advanced Customization Toggle
+    enable_custom = st.checkbox("⚙️ Customize Parameters", value=True,
                                 help="Adjust Market Cap, price filters, volume, R:R and fundamental filters.")
 
     if enable_custom:
@@ -519,15 +518,15 @@ with st.sidebar:
         with col_m2:
             max_mcap = st.number_input("Max Cap (Cr)", min_value=10.0, max_value=10000000.0, value=10000.0, step=1000.0)
 
-        st.markdown('<div class="sidebar-section">Price Range Filter</div>', unsafe_allow_html=True)[cite: 1]
-        min_price = st.number_input("Min Stock Price (₹)", min_value=0.5, max_value=50000.0, value=1.0, step=1.0)[cite: 1]
-        max_price = st.number_input("Max Stock Price (₹)", min_value=1.0, max_value=100000.0, value=10000.0, step=10.0)[cite: 1]
+        st.markdown('<div class="sidebar-section">Price Range Filter</div>', unsafe_allow_html=True)
+        min_price = st.number_input("Min Stock Price (₹)", min_value=0.5, max_value=50000.0, value=1.0, step=1.0)
+        max_price = st.number_input("Max Stock Price (₹)", min_value=1.0, max_value=100000.0, value=10000.0, step=10.0)
 
-        st.markdown('<div class="sidebar-section">Technical Settings</div>', unsafe_allow_html=True)[cite: 1]
-        min_rr = st.slider("Min Risk : Reward", 1.0, 4.0, 1.0, 0.5)[cite: 1]
-        lookback_weeks = st.slider("Trendline Lookback (Weeks)", 10, 40, 20, 2)[cite: 1]
-        min_vol_ratio = st.slider("Min Volume Ratio (vs 10W SMA)", 0.2, 3.0, 0.5, 0.1)[cite: 1]
-        target_multiplier = st.slider("Target Multiplier (x Risk)", 1.5, 5.0, 2.5, 0.5)[cite: 1]
+        st.markdown('<div class="sidebar-section">Technical Settings</div>', unsafe_allow_html=True)
+        min_rr = st.slider("Min Risk : Reward", 1.0, 4.0, 1.0, 0.5)
+        lookback_weeks = st.slider("Trendline Lookback (Weeks)", 10, 40, 20, 2)
+        min_vol_ratio = st.slider("Min Volume Ratio (vs 10W SMA)", 0.2, 3.0, 0.5, 0.1)
+        target_multiplier = st.slider("Target Multiplier (x Risk)", 1.5, 5.0, 2.5, 0.5)
 
         st.markdown('<div class="sidebar-section">Holdings & Fundamental Filter</div>', unsafe_allow_html=True)
         min_fii = st.slider("Min FII / Institutional (%)", 0.0, 50.0, 0.0, 1.0)
@@ -535,14 +534,14 @@ with st.sidebar:
     else:
         min_mcap = 1000.0
         max_mcap = 10000.0
-        min_price = 0.5[cite: 1]
-        max_price = 100000.0[cite: 1]
-        min_rr = 1.0[cite: 1]
-        lookback_weeks = 20[cite: 1]
-        min_vol_ratio = 0.5[cite: 1]
-        target_multiplier = 2.5[cite: 1]
-        min_fii = 0.0[cite: 1]
-        min_dii = 0.0[cite: 1]
+        min_price = 0.5
+        max_price = 100000.0
+        min_rr = 1.0
+        lookback_weeks = 20
+        min_vol_ratio = 0.5
+        target_multiplier = 2.5
+        min_fii = 0.0
+        min_dii = 0.0
 
     st.markdown("---")
     run_btn = st.button("▶  Run Deep Scanner", use_container_width=True, type="primary", disabled=len(selected_universe) == 0)
@@ -552,11 +551,11 @@ with st.sidebar:
 #  SESSION STATE & APP HEADER
 # ══════════════════════════════════════════════════════
 
-if "results"       not in st.session_state: st.session_state.results       = [][cite: 1]
-if "scanned_count" not in st.session_state: st.session_state.scanned_count = 0[cite: 1]
-if "last_run_ts"   not in st.session_state: st.session_state.last_run_ts   = None[cite: 1]
+if "results"       not in st.session_state: st.session_state.results       = []
+if "scanned_count" not in st.session_state: st.session_state.scanned_count = 0
+if "last_run_ts"   not in st.session_state: st.session_state.last_run_ts   = None
 
-ts_label = f"Last scan: {st.session_state.last_run_ts}" if st.session_state.last_run_ts else "Ready to scan"[cite: 1]
+ts_label = f"Last scan: {st.session_state.last_run_ts}" if st.session_state.last_run_ts else "Ready to scan"
 
 st.markdown(f"""
 <div class="app-header">
@@ -569,7 +568,7 @@ st.markdown(f"""
   </div>
   <div class="app-header-badge">{ts_label}</div>
 </div>
-""", unsafe_allow_html=True)[cite: 1]
+""", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════
@@ -662,11 +661,11 @@ if run_btn and selected_universe:
         })
 
     prog.empty()
-    results.sort(key=lambda x: x["Growth Score"], reverse=True)[cite: 1]
-    st.session_state.results       = results[cite: 1]
+    results.sort(key=lambda x: x["Growth Score"], reverse=True)
+    st.session_state.results       = results
     st.session_state.scanned_count = total
-    st.session_state.last_run_ts   = pd.Timestamp.now().strftime("%d %b %Y, %H:%M")[cite: 1]
-    st.rerun()[cite: 1]
+    st.session_state.last_run_ts   = pd.Timestamp.now().strftime("%d %b %Y, %H:%M")
+    st.rerun()
 
 
 # ══════════════════════════════════════════════════════
@@ -674,111 +673,111 @@ if run_btn and selected_universe:
 # ══════════════════════════════════════════════════════
 
 def build_chart(symbol: str, row: dict) -> go.Figure:
-    df        = row["_df"][cite: 1]
-    trendline = row["_trendline"][cite: 1]
-    sl, t1, t2 = row["Stop Loss"], row["Target (1:3)"], row["Target 2"][cite: 1]
-    dates     = df.index.tolist()[cite: 1]
+    df        = row["_df"]
+    trendline = row["_trendline"]
+    sl, t1, t2 = row["Stop Loss"], row["Target (1:3)"], row["Target 2"]
+    dates     = df.index.tolist()
 
-    fig = make_subplots([cite: 1]
-        rows=2, cols=1, shared_xaxes=True,[cite: 1]
-        row_heights=[0.73, 0.27], vertical_spacing=0.03,[cite: 1]
-    )[cite: 1]
-    fig.add_trace(go.Candlestick([cite: 1]
-        x=dates, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],[cite: 1]
-        name="Price",[cite: 1]
-        increasing_line_color="#34d399", increasing_fillcolor="#34d399",[cite: 1]
-        decreasing_line_color="#f87171", decreasing_fillcolor="#f87171",[cite: 1]
-    ), row=1, col=1)[cite: 1]
-    fig.add_trace(go.Scatter([cite: 1]
-        x=dates, y=trendline, mode="lines", name="Resistance",[cite: 1]
-        line=dict(color="#f59e0b", width=1.8, dash="dot"),[cite: 1]
-    ), row=1, col=1)[cite: 1]
-    for level, color, dash, label in [[cite: 1]
-        (sl,  "#f87171", "dash",  f"SL  ₹{sl:.1f}"),[cite: 1]
-        (t1,  "#34d399", "dash",  f"T1  ₹{t1:.1f}"),[cite: 1]
-        (t2,  "#86efac", "dot",   f"T2  ₹{t2:.1f}"),[cite: 1]
+    fig = make_subplots(
+        rows=2, cols=1, shared_xaxes=True,
+        row_heights=[0.73, 0.27], vertical_spacing=0.03,
+    )
+    fig.add_trace(go.Candlestick(
+        x=dates, open=df["Open"], high=df["High"], low=df["Low"], close=df["Close"],
+        name="Price",
+        increasing_line_color="#34d399", increasing_fillcolor="#34d399",
+        decreasing_line_color="#f87171", decreasing_fillcolor="#f87171",
+    ), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=trendline, mode="lines", name="Resistance",
+        line=dict(color="#f59e0b", width=1.8, dash="dot"),
+    ), row=1, col=1)
+    for level, color, dash, label in [
+        (sl,  "#f87171", "dash",  f"SL  ₹{sl:.1f}"),
+        (t1,  "#34d399", "dash",  f"T1  ₹{t1:.1f}"),
+        (t2,  "#86efac", "dot",   f"T2  ₹{t2:.1f}"),
     ]:
-        fig.add_hline([cite: 1]
-            y=level, line_color=color, line_dash=dash,[cite: 1]
-            annotation_text=label, annotation_font_color=color,[cite: 1]
-            annotation_position="right", row=1, col=1,[cite: 1]
-        )[cite: 1]
-    vol_colors = ["#34d399" if c >= o else "#f87171"[cite: 1]
-                  for o, c in zip(df["Open"], df["Close"])][cite: 1]
-    fig.add_trace(go.Bar([cite: 1]
-        x=dates, y=df["Volume"], name="Volume",[cite: 1]
-        marker_color=vol_colors, opacity=0.55,[cite: 1]
-    ), row=2, col=1)[cite: 1]
+        fig.add_hline(
+            y=level, line_color=color, line_dash=dash,
+            annotation_text=label, annotation_font_color=color,
+            annotation_position="right", row=1, col=1,
+        )
+    vol_colors = ["#34d399" if c >= o else "#f87171"
+                  for o, c in zip(df["Open"], df["Close"])]
+    fig.add_trace(go.Bar(
+        x=dates, y=df["Volume"], name="Volume",
+        marker_color=vol_colors, opacity=0.55,
+    ), row=2, col=1)
 
-    axis_style = dict(gridcolor="#0f172a", zerolinecolor="#0f172a", color="#475569")[cite: 1]
-    fig.update_layout([cite: 1]
-        title=dict(text=f"<b>{symbol}.NS</b> — Weekly Breakout Chart", font=dict(size=13, color="#94a3b8")),[cite: 1]
-        paper_bgcolor="#060a10", plot_bgcolor="#060a10",[cite: 1]
-        font=dict(family="Inter", color="#64748b"),[cite: 1]
-        xaxis_rangeslider_visible=False,[cite: 1]
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10)),[cite: 1]
-        height=580,[cite: 1]
-        margin=dict(l=10, r=80, t=48, b=10),[cite: 1]
-        xaxis=axis_style, xaxis2=axis_style,[cite: 1]
-        yaxis=axis_style, yaxis2=axis_style,[cite: 1]
-    )[cite: 1]
-    return fig[cite: 1]
+    axis_style = dict(gridcolor="#0f172a", zerolinecolor="#0f172a", color="#475569")
+    fig.update_layout(
+        title=dict(text=f"<b>{symbol}.NS</b> — Weekly Breakout Chart", font=dict(size=13, color="#94a3b8")),
+        paper_bgcolor="#060a10", plot_bgcolor="#060a10",
+        font=dict(family="Inter", color="#64748b"),
+        xaxis_rangeslider_visible=False,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, bgcolor="rgba(0,0,0,0)", font=dict(size=10)),
+        height=580,
+        margin=dict(l=10, r=80, t=48, b=10),
+        xaxis=axis_style, xaxis2=axis_style,
+        yaxis=axis_style, yaxis2=axis_style,
+    )
+    return fig
 
 
 def build_radar(fund: dict) -> go.Figure:
-    cats  = ["Sales CAGR","PAT CAGR","ROCE","ROE","Low Leverage"][cite: 1]
-    sales = min(max(0, fund.get("sales_cagr_3y") or 0)/40*100, 100)[cite: 1]
-    pat   = min(max(0, fund.get("pat_cagr_3y") or 0)/40*100, 100)[cite: 1]
-    roce  = min(max(0, fund.get("roce") or 0)/30*100, 100)[cite: 1]
-    roe   = min(max(0, fund.get("roe") or 0)/30*100, 100)[cite: 1]
-    de    = fund.get("debt_equity")[cite: 1]
-    lev   = max(0, 100-(de or 1)*50) if de is not None else 50[cite: 1]
-    vals  = [sales, pat, roce, roe, lev][cite: 1]
-    fig = go.Figure(go.Scatterpolar([cite: 1]
-        r=vals+[vals[0]], theta=cats+[cats[0]],[cite: 1]
-        fill="toself", line_color="#38bdf8", fillcolor="rgba(56,189,248,0.1)",[cite: 1]
-    ))[cite: 1]
-    fig.update_layout([cite: 1]
-        polar=dict([cite: 1]
-            bgcolor="#0a0f1a",[cite: 1]
-            radialaxis=dict(visible=True, range=[0,100], color="#334155", gridcolor="#0f172a"),[cite: 1]
-            angularaxis=dict(color="#475569"),[cite: 1]
-        ),[cite: 1]
-        paper_bgcolor="#060a10",[cite: 1]
-        font=dict(color="#64748b", size=11),[cite: 1]
-        height=280, margin=dict(l=30,r=30,t=20,b=20),[cite: 1]
-    )[cite: 1]
-    return fig[cite: 1]
+    cats  = ["Sales CAGR","PAT CAGR","ROCE","ROE","Low Leverage"]
+    sales = min(max(0, fund.get("sales_cagr_3y") or 0)/40*100, 100)
+    pat   = min(max(0, fund.get("pat_cagr_3y") or 0)/40*100, 100)
+    roce  = min(max(0, fund.get("roce") or 0)/30*100, 100)
+    roe   = min(max(0, fund.get("roe") or 0)/30*100, 100)
+    de    = fund.get("debt_equity")
+    lev   = max(0, 100-(de or 1)*50) if de is not None else 50
+    vals  = [sales, pat, roce, roe, lev]
+    fig = go.Figure(go.Scatterpolar(
+        r=vals+[vals[0]], theta=cats+[cats[0]],
+        fill="toself", line_color="#38bdf8", fillcolor="rgba(56,189,248,0.1)",
+    ))
+    fig.update_layout(
+        polar=dict(
+            bgcolor="#0a0f1a",
+            radialaxis=dict(visible=True, range=[0,100], color="#334155", gridcolor="#0f172a"),
+            angularaxis=dict(color="#475569"),
+        ),
+        paper_bgcolor="#060a10",
+        font=dict(color="#64748b", size=11),
+        height=280, margin=dict(l=30,r=30,t=20,b=20),
+    )
+    return fig
 
 
 def badge_html(val, good, fmt="{:.1f}", suffix="%"):
-    if val is None:[cite: 1]
-        return '<span class="fund-badge badge-neutral">—</span>'[cite: 1]
-    cls = "badge-green" if val >= good else "badge-amber"[cite: 1]
-    return f'<span class="fund-badge {cls}">{fmt.format(val)}{suffix}</span>'[cite: 1]
+    if val is None:
+        return '<span class="fund-badge badge-neutral">—</span>'
+    cls = "badge-green" if val >= good else "badge-amber"
+    return f'<span class="fund-badge {cls}">{fmt.format(val)}{suffix}</span>'
 
 
 def result_card_html(r: dict) -> str:
-    sym     = r["Symbol"][cite: 1]
-    sector  = r["Sector"][cite: 1]
-    ltp     = r["LTP"][cite: 1]
-    sl      = r["Stop Loss"][cite: 1]
-    t1      = r["Target (1:3)"][cite: 1]
-    rr      = r["R:R"][cite: 1]
-    risk    = r["Risk %"][cite: 1]
-    vol     = r["Vol Expansion"][cite: 1]
-    score   = r["Growth Score"][cite: 1]
+    sym     = r["Symbol"]
+    sector  = r["Sector"]
+    ltp     = r["LTP"]
+    sl      = r["Stop Loss"]
+    t1      = r["Target (1:3)"]
+    rr      = r["R:R"]
+    risk    = r["Risk %"]
+    vol     = r["Vol Expansion"]
+    score   = r["Growth Score"]
     mcap    = r["Market Cap (Cr)"]
     fii     = r["Inst / FII %"]
-    is_hg   = sector in HIGH_GROWTH_SECTORS[cite: 1]
+    is_hg   = sector in HIGH_GROWTH_SECTORS
 
-    sc = "#34d399" if score>=70 else ("#f59e0b" if score>=45 else "#f87171")[cite: 1]
+    sc = "#34d399" if score>=70 else ("#f59e0b" if score>=45 else "#f87171")
     mcap_str = f"₹{mcap:,.0f} Cr" if isinstance(mcap, (int, float)) else str(mcap)
     fii_str   = f"{fii:.1f}%" if fii else "—"
 
-    hg_pill  = f'<span class="pill pill-hg">★ {sector}</span>' if is_hg else f'<span class="pill pill-hg" style="background:#0f172a;color:#334155;">{sector}</span>'[cite: 1]
-    rr_pill  = f'<span class="pill pill-rr">R:R {rr}x</span>'[cite: 1]
-    vol_pill = f'<span class="pill pill-vol">Vol {vol}x</span>'[cite: 1]
+    hg_pill  = f'<span class="pill pill-hg">★ {sector}</span>' if is_hg else f'<span class="pill pill-hg" style="background:#0f172a;color:#334155;">{sector}</span>'
+    rr_pill  = f'<span class="pill pill-rr">R:R {rr}x</span>'
+    vol_pill = f'<span class="pill pill-vol">Vol {vol}x</span>'
 
     return f"""
     <div class="result-card">
@@ -816,26 +815,26 @@ def result_card_html(r: dict) -> str:
           <div class="score-num" style="color:{sc};">{score}</div>
         </div>
       </div>
-    </div>"""[cite: 1]
+    </div>"""
 
 
 # ══════════════════════════════════════════════════════
-#  ORIGINAL 3 TABS (SCREENER, CHART, FUNDAMENTALS)
+#  3 TABS (SCREENER, CHART, FUNDAMENTALS)
 # ══════════════════════════════════════════════════════
 
-tab1, tab2, tab3 = st.tabs([[cite: 1]
-    "  📋  Screener & Leaderboard  ",[cite: 1]
-    "  📈  Chart Deep-Dive  ",[cite: 1]
-    "  🧮  Fundamentals  ",[cite: 1]
-])[cite: 1]
+tab1, tab2, tab3 = st.tabs([
+    "  📋  Screener & Leaderboard  ",
+    "  📈  Chart Deep-Dive  ",
+    "  🧮  Fundamentals  ",
+])
 
 # ─────────────────────────── TAB 1 ───────────────────────────
-with tab1:[cite: 1]
-    results  = st.session_state.results[cite: 1]
-    scanned  = st.session_state.scanned_count[cite: 1]
-    n_bo     = len(results)[cite: 1]
-    n_hc     = len([r for r in results if r["Growth Score"] >= 60])[cite: 1]
-    avg_sc   = round(np.mean([r["Growth Score"] for r in results]), 1) if results else 0[cite: 1]
+with tab1:
+    results  = st.session_state.results
+    scanned  = st.session_state.scanned_count
+    n_bo     = len(results)
+    n_hc     = len([r for r in results if r["Growth Score"] >= 60])
+    avg_sc   = round(np.mean([r["Growth Score"] for r in results]), 1) if results else 0
 
     st.markdown(f"""
     <div class="kpi-row">
@@ -860,9 +859,9 @@ with tab1:[cite: 1]
         <div class="kpi-sub">Composite 0–100</div>
       </div>
     </div>
-    """, unsafe_allow_html=True)[cite: 1]
+    """, unsafe_allow_html=True)
 
-    if not results:[cite: 1]
+    if not results:
         st.markdown("""
         <div class="empty-state">
           <div class="empty-icon">🔍</div>
@@ -871,26 +870,26 @@ with tab1:[cite: 1]
             Select your stock categories in the sidebar and click <b>▶ Run Deep Scanner</b>.
           </div>
         </div>
-        """, unsafe_allow_html=True)[cite: 1]
+        """, unsafe_allow_html=True)
     else:
-        for r in results:[cite: 1]
-            st.markdown(result_card_html(r), unsafe_allow_html=True)[cite: 1]
+        for r in results:
+            st.markdown(result_card_html(r), unsafe_allow_html=True)
 
 # ─────────────────────────── TAB 2 ───────────────────────────
-with tab2:[cite: 1]
-    results = st.session_state.results[cite: 1]
-    if not results:[cite: 1]
+with tab2:
+    results = st.session_state.results
+    if not results:
         st.markdown("""
         <div class="empty-state">
           <div class="empty-icon">📈</div>
           <div class="empty-title">Charts unlock after scanning</div>
           <div class="empty-body">Run the scanner first to inspect charts.</div>
         </div>
-        """, unsafe_allow_html=True)[cite: 1]
+        """, unsafe_allow_html=True)
     else:
-        syms = [r["Symbol"] for r in results][cite: 1]
-        selected = st.selectbox("Stock", syms, key="chart_select")[cite: 1]
-        row = next(r for r in results if r["Symbol"] == selected)[cite: 1]
+        syms = [r["Symbol"] for r in results]
+        selected = st.selectbox("Stock", syms, key="chart_select")
+        row = next(r for r in results if r["Symbol"] == selected)
 
         st.markdown(f"""
         <div class="trade-panel">
@@ -915,31 +914,31 @@ with tab2:[cite: 1]
             <div class="tp-val rr">{row['R:R']}x</div>
           </div>
         </div>
-        """, unsafe_allow_html=True)[cite: 1]
+        """, unsafe_allow_html=True)
 
-        fig = build_chart(selected, row)[cite: 1]
+        fig = build_chart(selected, row)
         st.plotly_chart(fig, use_container_width=True)
 
 # ─────────────────────────── TAB 3 ───────────────────────────
-with tab3:[cite: 1]
-    results = st.session_state.results[cite: 1]
-    if not results:[cite: 1]
+with tab3:
+    results = st.session_state.results
+    if not results:
         st.markdown("""
         <div class="empty-state">
           <div class="empty-icon">🧮</div>
           <div class="empty-title">Fundamentals unlock after scanning</div>
           <div class="empty-body">Run the scanner first to inspect fundamentals.</div>
         </div>
-        """, unsafe_allow_html=True)[cite: 1]
+        """, unsafe_allow_html=True)
     else:
-        syms = [r["Symbol"] for r in results][cite: 1]
-        selected_f = st.selectbox("Stock", syms, key="fund_select")[cite: 1]
-        row_f = next(r for r in results if r["Symbol"] == selected_f)[cite: 1]
-        fund  = row_f["_fund"][cite: 1]
+        syms = [r["Symbol"] for r in results]
+        selected_f = st.selectbox("Stock", syms, key="fund_select")
+        row_f = next(r for r in results if r["Symbol"] == selected_f)
+        fund  = row_f["_fund"]
 
-        col_l, col_r = st.columns([1, 1])[cite: 1]
+        col_l, col_r = st.columns([1, 1])
 
-        with col_l:[cite: 1]
+        with col_l:
             st.markdown('<div class="section-label">Financial Metrics & Holdings</div>', unsafe_allow_html=True)
             st.markdown(f"""
             <div class="fund-card">
@@ -951,8 +950,8 @@ with tab3:[cite: 1]
               <div class="fund-row"><span class="fund-row-label">ROCE</span>{badge_html(fund.get('roce'), 15)}</div>
               <div class="fund-row"><span class="fund-row-label">ROE</span>{badge_html(fund.get('roe'), 15)}</div>
             </div>
-            """, unsafe_allow_html=True)[cite: 1]
+            """, unsafe_allow_html=True)
 
-        with col_r:[cite: 1]
-            st.markdown('<div class="section-label">Fundamental Radar</div>', unsafe_allow_html=True)[cite: 1]
-            st.plotly_chart(build_radar(fund), use_container_width=True)[cite: 1]
+        with col_r:
+            st.markdown('<div class="section-label">Fundamental Radar</div>', unsafe_allow_html=True)
+            st.plotly_chart(build_radar(fund), use_container_width=True)
